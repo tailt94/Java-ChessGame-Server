@@ -1,7 +1,7 @@
 package com.tuantai.chessgameserver;
 
+
 import java.io.*;
-import java.lang.reflect.Array;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -12,7 +12,7 @@ import java.util.Iterator;
  */
 public class Server {
     private ArrayList<Socket> clientSockets = new ArrayList<>();
-    private ArrayList<PrintWriter> clientOutputStream = new ArrayList<>();
+    private ArrayList<PrintWriter> clientWriters = new ArrayList<>();
     private ServerSocket serverSocket;
     private ArrayList<String> playerNames = new ArrayList<>();
 
@@ -24,9 +24,9 @@ public class Server {
                 Socket socket = serverSocket.accept();
                 clientSockets.add(socket);
                 PrintWriter writer = new PrintWriter(socket.getOutputStream());
-                clientOutputStream.add(writer);
+                clientWriters.add(writer);
 
-                Thread t = new Thread(new ClientHandler(socket));
+                Thread t = new Thread(new ConnectionHandler(socket));
                 t.start();
                 System.out.println("Player " + i + " connected!");
             }
@@ -35,8 +35,15 @@ public class Server {
         }
     }
 
-    public void tellEveryOne(String message) {
-        Iterator it = clientOutputStream.iterator();
+    private void startDataThread() {
+        for (Socket socket : clientSockets) {
+            Thread t = new Thread(new DataHandler(socket));
+            t.start();
+        }
+    }
+
+    private void sendChatData(String message) {
+        Iterator it = clientWriters.iterator();
         while (it.hasNext()) {
             try {
                 PrintWriter writer = (PrintWriter) it.next();
@@ -48,25 +55,22 @@ public class Server {
         }
     }
 
-    public void sendPlayerInfo() {
-        clientOutputStream.get(0).println("1" + "_" + playerNames.get(0) + "_" + playerNames.get(1));
-        clientOutputStream.get(0).flush();
-        clientOutputStream.get(1).println("2" + "_" + playerNames.get(1) + "_" + playerNames.get(0));
-        clientOutputStream.get(1).flush();
+    private void sendPlayerInfo() {
+        clientWriters.get(0).println("1" + "_" + playerNames.get(0) + "_" + playerNames.get(1));
+        clientWriters.get(0).flush();
+        clientWriters.get(1).println("2" + "_" + playerNames.get(1) + "_" + playerNames.get(0));
+        clientWriters.get(1).flush();
     }
 
-    public void startChatThread() {
-        for (int i = 0; i <= clientSockets.size(); i++) {
-            Thread t = new Thread(new ChatHandler(clientSockets.get(i)));
-            t.start();
-        }
+    private void sendMoveInfo(String message) {
+        System.out.println(message);
     }
 
-    class ClientHandler implements Runnable {
+    private class ConnectionHandler implements Runnable {
         BufferedReader reader;
         Socket socket;
 
-        public ClientHandler(Socket clientSocket) {
+        public ConnectionHandler(Socket clientSocket) {
             try {
                 socket = clientSocket;
                 InputStreamReader isReader = new InputStreamReader(socket.getInputStream());
@@ -85,7 +89,7 @@ public class Server {
                     System.out.println(playerName);
                     if (playerNames.size() == 2) {
                         sendPlayerInfo();
-                        startChatThread();
+                        startDataThread();
                     }
                 }
             } catch (Exception e) {
@@ -95,11 +99,11 @@ public class Server {
 
     }
 
-    class ChatHandler implements Runnable {
+    private class DataHandler implements Runnable {
         Socket socket;
         BufferedReader reader;
 
-        public ChatHandler(Socket socket) {
+        public DataHandler(Socket socket) {
             try {
                 this.socket = socket;
                 InputStreamReader isReader = new InputStreamReader(socket.getInputStream());
@@ -114,7 +118,11 @@ public class Server {
             String message;
             try {
                 while ((message = reader.readLine()) != null) {
-                    tellEveryOne(message);
+                    if (message.contains("_")) {
+                        sendMoveInfo(message);
+                    } else {
+                        sendChatData(message);
+                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
