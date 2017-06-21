@@ -11,6 +11,7 @@ import java.util.Iterator;
  * Created by Lionheart on 18-Jun-17.
  */
 public class Server {
+    private ArrayList<Socket> clientSockets = new ArrayList<>();
     private ArrayList<PrintWriter> clientOutputStream = new ArrayList<>();
     private ServerSocket serverSocket;
     private ArrayList<String> playerNames = new ArrayList<>();
@@ -20,11 +21,12 @@ public class Server {
             serverSocket = new ServerSocket(5000);
 
             for (int i = 1; i <= 2; i++) {
-                Socket clientSocket = serverSocket.accept();
-                PrintWriter writer = new PrintWriter(clientSocket.getOutputStream());
+                Socket socket = serverSocket.accept();
+                clientSockets.add(socket);
+                PrintWriter writer = new PrintWriter(socket.getOutputStream());
                 clientOutputStream.add(writer);
 
-                Thread t = new Thread(new ClientHandler(clientSocket, i));
+                Thread t = new Thread(new ClientHandler(socket));
                 t.start();
                 System.out.println("Player " + i + " connected!");
             }
@@ -53,17 +55,22 @@ public class Server {
         clientOutputStream.get(1).flush();
     }
 
-    public class ClientHandler implements Runnable {
+    public void startChatThread() {
+        for (int i = 0; i <= clientSockets.size(); i++) {
+            Thread t = new Thread(new ChatHandler(clientSockets.get(i)));
+            t.start();
+        }
+    }
+
+    class ClientHandler implements Runnable {
         BufferedReader reader;
         Socket socket;
-        int playerId;
 
-        public ClientHandler(Socket clientSocket, int playerId) {
+        public ClientHandler(Socket clientSocket) {
             try {
                 socket = clientSocket;
                 InputStreamReader isReader = new InputStreamReader(socket.getInputStream());
                 reader = new BufferedReader(isReader);
-                this.playerId = playerId;
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -78,11 +85,41 @@ public class Server {
                     System.out.println(playerName);
                     if (playerNames.size() == 2) {
                         sendPlayerInfo();
+                        startChatThread();
                     }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+
+    }
+
+    class ChatHandler implements Runnable {
+        Socket socket;
+        BufferedReader reader;
+
+        public ChatHandler(Socket socket) {
+            try {
+                this.socket = socket;
+                InputStreamReader isReader = new InputStreamReader(socket.getInputStream());
+                reader = new BufferedReader(isReader);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void run() {
+            String message;
+            try {
+                while ((message = reader.readLine()) != null) {
+                    tellEveryOne(message);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
         }
     }
 }
