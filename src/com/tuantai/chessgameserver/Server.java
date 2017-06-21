@@ -63,7 +63,15 @@ public class Server {
     }
 
     private void sendMoveInfo(String message) {
-        System.out.println(message);
+        String[] s = message.split("_");
+        String data = message.substring(2);
+        if (s[0].equals("1")) {
+            clientWriters.get(1).println(data);
+            clientWriters.get(1).flush();
+        } else if (s[0].equals("2")) {
+            clientWriters.get(0).println(data);
+            clientWriters.get(0).flush();
+        }
     }
 
     private class ConnectionHandler implements Runnable {
