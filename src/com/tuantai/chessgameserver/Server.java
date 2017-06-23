@@ -1,6 +1,8 @@
 package com.tuantai.chessgameserver;
 
 
+import javafx.application.Platform;
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -16,6 +18,9 @@ public class Server {
     private ServerSocket serverSocket;
     private ArrayList<String> playerNames = new ArrayList<>();
 
+    private OnDataReceiveListener dataListener = null;
+    private OnConnectionEstablishListener connectionListener = null;
+
     public void start() {
         try {
             serverSocket = new ServerSocket(5000);
@@ -28,11 +33,18 @@ public class Server {
 
                 Thread t = new Thread(new ConnectionHandler(socket));
                 t.start();
-                System.out.println("Player " + i + " connected!");
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public void setOnDataReceiveListener(OnDataReceiveListener listener) {
+        this.dataListener = listener;
+    }
+
+    public void setOnConnectionEstablishListener(OnConnectionEstablishListener listener) {
+        this.connectionListener = listener;
     }
 
     private void startDataThread() {
@@ -74,6 +86,15 @@ public class Server {
         }
     }
 
+    private void updateLog(String message) {
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                dataListener.onDataReceive(message);
+            }
+        });
+    }
+
     private class ConnectionHandler implements Runnable {
         BufferedReader reader;
         Socket socket;
@@ -94,8 +115,15 @@ public class Server {
             try {
                 if ((playerName = reader.readLine()) != null) {
                     playerNames.add(playerName);
-                    System.out.println(playerName);
                     if (playerNames.size() == 2) {
+                        Platform.runLater(new Runnable() {
+                            @Override
+                            public void run() {
+                                connectionListener.onConnectionEstablish();
+                            }
+                        });
+                        updateLog("Player " + playerNames.get(0) + " connected!");
+                        updateLog("Player " + playerNames.get(1) + " connected!");
                         sendPlayerInfo();
                         startDataThread();
                     }
@@ -127,8 +155,13 @@ public class Server {
             try {
                 while ((message = reader.readLine()) != null) {
                     if (message.contains("_")) {
+                        String name = (message.split("_")[0].equals("1")) ? playerNames.get(0) : playerNames.get(1);
+                        String data = "Player " + name + " made a move...";
+                        updateLog(data);
                         sendMoveInfo(message);
                     } else {
+                        String data = "Message received from a player...";
+                        updateLog(data);
                         sendChatData(message);
                     }
                 }
@@ -137,5 +170,13 @@ public class Server {
             }
 
         }
+    }
+
+    interface OnDataReceiveListener {
+        void onDataReceive(String message);
+    }
+
+    interface OnConnectionEstablishListener {
+        void onConnectionEstablish();
     }
 }

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.text.*?>
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+
+<AnchorPane prefHeight="300.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <Label alignment="CENTER" layoutX="234.0" layoutY="158.0" prefHeight="95.0" prefWidth="400.0" text="Waiting for connection..." textAlignment="CENTER" textFill="#137b83" AnchorPane.bottomAnchor="50.0" AnchorPane.leftAnchor="100.0" AnchorPane.rightAnchor="100.0" AnchorPane.topAnchor="50.0">
+         <font>
+            <Font name="System Bold" size="30.0" />
+         </font>
+      </Label>
+   </children>
+</AnchorPane>
