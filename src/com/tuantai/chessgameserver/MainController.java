@@ -21,6 +21,7 @@ public class MainController implements Initializable, Server.OnDataReceiveListen
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        log.setEditable(false);
         server.setOnDataReceiveListener(this);
     }
 
